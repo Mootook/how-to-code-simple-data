@@ -1,6 +1,7 @@
 # How to Code - Simple Data
 
 [Course Link](https://www.edx.org/course/how-to-code-simple-data)
+
 [Dr.Racket](https://racket-lang.org/)
 
 
