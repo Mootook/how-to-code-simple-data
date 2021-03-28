@@ -66,6 +66,7 @@
 (define T0 (make-tank (/ WIDTH 2) 1))   ;center going right
 (define T1 (make-tank 50 1))            ;going right
 (define T2 (make-tank 50 -1))           ;going left
+(define T3 (make-tank (/ WIDTH 2) 0))   ;center no movement
 
 #;
 (define (fn-for-tank t)
@@ -101,9 +102,109 @@
   (... (missile-x m) (missile-y m)))
 
 
-
 (define G0 (make-game empty empty T0))
 (define G1 (make-game empty empty T1))
 (define G2 (make-game (list I1) (list M1) T1))
 (define G3 (make-game (list I1 I2) (list M1 M2) T1))
+(define G4 (make-game empty empty T3)) ;starting Game state (no invaders, no missiles, centered tank)
 
+;; Functions:
+
+;; Game -> Game
+;; Begin the game.
+;; Start with (main G4)
+;; <no tests for main functions>
+
+(define (main g)
+  (big-bang g
+    (on-tick tick-game)     ;Game -> Game
+    (to-draw render-game)   ;Game -> Image
+    ;(stop-when ...)     ;Game -> Boolean
+    (on-key process-input)))   ;KeyEvent Game -> Game
+
+;; Game -> Game
+;; interp. process the tick for Game state (moves tank if dx, descends invaders, ascends missiles)
+;; !!!
+
+(check-expect (tick-game G4) G4) ;base case
+(check-expect
+(define (tick-game g) g) ;stub
+;; <use template from Game>
+
+#;
+(define (tick-game s)
+  (... (fn-for-loinvader (game-invaders s))
+       (fn-for-lom (game-missiles s))
+       (fn-for-tank (game-tank s))))
+
+
+;; Game -> Image
+;; interp. render the Game in its given state
+;; !!!
+
+;(define (render-game g) BACKGROUND) ;stub
+
+(define (render-game g)
+  (render-t (game-tank g)))
+
+;; Tank -> Image
+;; interp. return the image for the given tank on the BACKGROUND
+(check-expect (render-t (make-tank 100 0))
+                        (place-image TANK 100 (- HEIGHT TANK-HEIGHT/2) BACKGROUND))
+
+;(define (render-t t) BACKGROUND) ;stub
+;; <use template from tank>
+(define (render-t t)
+  (place-image TANK (tank-x t) (- HEIGHT TANK-HEIGHT/2) BACKGROUND))
+
+
+;; KeyEvent Game -> Game
+;; interp. process keyboard input, moving tank if left or right arrow is pressed, and firing missile if
+;;         space is pressed.
+
+(check-expect (process-input G4 "up" ) G4)
+(check-expect (process-input G4 "left")
+              (make-game (game-invaders G4)
+                         (fire "up" (tank-x (game-tank G4)) (game-missiles G4))
+                         (move-tank (game-tank G4) "left")))
+(check-expect (process-input G4 "right")
+              (make-game (game-invaders G4)
+                         (fire "right" (tank-x (game-tank G4)) (game-missiles G4))
+                         (move-tank (game-tank G4) "right")))
+;(define (process-input k g) g) ;stub
+;; <use template from Game>
+
+(define (process-input g k)
+  (make-game (game-invaders g)
+             (fire k (tank-x (game-tank g)) (game-missiles g))
+             (move-tank (game-tank g) k)))
+
+
+;; KeyEvent Number ListOfMissiles -> ListOfMissiles
+;; interp. if keyevent is space, add another missile to list of missiles, starting at (x, HEIGHT).
+(check-expect (fire "left" 100 empty) empty)
+(check-expect (fire " " 100 (list M1))
+              (list (make-missile 100 HEIGHT) M1))
+(check-expect (fire " " 100 (list M1 M2))
+              (list (make-missile 100 HEIGHT) M1 M2))
+
+;(define (fire k x lom) lom) ;stub
+;; <use template from Missile>
+
+(define (fire k x lom)
+  (cond [(key=? " " k) (cons (make-missile x HEIGHT) lom)]
+        [else lom]))
+
+;; Tank KeyEvent -> Tank
+;; interp. process keyboard input and move the tank if left or right arrow keys pressed.
+(check-expect (move-tank (make-tank 0 0) "up")    (make-tank 0 0))  ;No Movement
+(check-expect (move-tank (make-tank 0 0) "left")  (make-tank 0 -1)) ;LEFT
+(check-expect (move-tank (make-tank 0 0) "right") (make-tank 0 1))  ;RIGHT
+
+;(define (move-tank k g) g) ;stub
+;; <use template from Game>
+
+(define (move-tank t k)
+  (cond [(key=? "left" k) (make-tank (tank-x t) -1)]
+        [(key=? "right" k) (make-tank (tank-x t) 1)]
+        [else t]))
